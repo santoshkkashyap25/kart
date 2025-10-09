@@ -16,7 +16,7 @@
   </tr>
   <tr>
     <td><img src="screenshots/cart.jpg" alt="Shopping Cart" width="400"/><br/><sub><b>Shopping Cart</b></sub></td>
-    <td><img src="screenshots/admin.admin" alt="Admin Dashboard" width="400"/><br/><sub><b>Admin Dashboard</b></sub></td>
+    <td><img src="screenshots/admin.jpg" alt="Admin Dashboard" width="400"/><br/><sub><b>Admin Dashboard</b></sub></td>
   </tr>
 </table>
 
