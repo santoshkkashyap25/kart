@@ -104,15 +104,6 @@ coverage html  # Generate HTML report
 
 # Run specific test suite
 python manage.py test app.tests.test_views
-
-# Run linting
-# flake8 .
-# black . --check
-# pylint app/
-
-# # Run security checks
-# bandit -r app/
-# python manage.py check --deploy
 ```
 
 <!-- ## Performance Benchmarks
