@@ -1,0 +1,52 @@
+{% extends 'app/base.html' %}
+{% load static %}
+
+{% block title %}Recently Viewed Products{% endblock title %}
+
+{% block main-content %}
+<div class="container my-5">
+  <div class="row">
+    <h3 class="mb-4">Recently Viewed Products</h3>
+
+    {% if products %}
+      <div class="row">
+        {% for product in products %}
+        <div class="col-md-3 col-sm-6 mb-4">
+          <div class="card shadow-sm h-100 border-0">
+            <a href="{% url 'product-detail' product.id %}">
+              <img src="{{ product.product_image.url }}" class="card-img-top" alt="{{ product.title }}" style="height: 220px; object-fit: cover;">
+            </a>
+            <div class="card-body">
+              <h6 class="card-title text-truncate">{{ product.title }}</h6>
+              <p class="mb-1"><strong>₹{{ product.discounted_price }}</strong>
+                {% if product.discounted_price < product.selling_price %}
+                <small class="text-muted text-decoration-line-through">₹{{ product.selling_price }}</small>
+                {% endif %}
+              </p>
+
+              {% if product.is_in_stock %}
+              <span class="badge bg-success mb-2">In Stock</span>
+              {% else %}
+              <span class="badge bg-danger mb-2">Out of Stock</span>
+              {% endif %}
+
+              <div class="d-grid">
+                <a href="{% url 'product-detail' product.id %}" class="btn btn-outline-primary btn-sm">
+                  View Details
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="text-center py-5">
+        <img src="{% static 'app/images/empty-state.svg' %}" alt="No products" width="150" class="mb-3">
+        <h5 class="text-muted">You haven’t viewed any products yet.</h5>
+        <a href="/" class="btn btn-primary mt-3">Continue Shopping</a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock main-content %}

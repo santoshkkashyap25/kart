@@ -1,34 +1,60 @@
 {% extends 'app/base.html' %}
 {% load static %}
-{% block title %}Profile{% endblock title %}
+{% block title %}Address{% endblock title %}
+
 {% block main-content %}
 <div class="container my-5">
- <div class="row">
- <h3>Welcome <span class="text-capitalize">{{request.user}}</span></h3>
-  <div class="col-sm-2 border-end">
-   <ul class="list-unstyled">
-    <li class="d-grid"><a href="{% url 'profile' %}" class="btn">Profile</a></li>
-    <li class="d-grid"><a href="{% url 'address' %}" class="btn {{active}}">Address</a></li>
-   </ul>
-  </div>
-  <div class="col-sm-9 offset-sm-1">
-   <div class="row">
-    {% for ad in add %}
-    <div class="col-sm-6">
-     <div class="card">
-      <div class="card-body">
-       <h3>Address {{forloop.counter}}</h3>
-       <p>Name: {{ad.name}}</p>
-       <p>Locality: {{ad.locality}}</p>
-       <p>City: {{ad.city}}</p>
-       <p>State: {{ad.state}}</p>
-       <p>Pin Code: {{ad.zipcode}}</p>
-      </div>
-     </div>
+    <div class="row">
+        <div class="col-12 mb-4">
+            <h2 class="fw-bold text-center text-primary">
+                My Delivery Addresses
+            </h2>
+        </div>
     </div>
-{% endfor %}
-   </div>
-  </div>
- </div>
+    
+    <div class="row">
+        <div class="col-md-3 col-lg-2 border-end"> 
+            <div class="list-group shadow-sm mb-4">
+                <a href="{% url 'profile' %}" 
+                   class="list-group-item list-group-item-action {% if active == 'profile' %}active{% endif %}" 
+                   aria-current="false">
+                    <i class="fas fa-user me-2"></i> Profile
+                </a>
+                
+                <a href="{% url 'address' %}" 
+                   class="list-group-item list-group-item-action {% if active == 'address' %}active{% endif %}">
+                    <i class="fas fa-map-marker-alt me-2"></i> Address
+                </a>
+            </div>
+        </div>
+
+        <div class="col-md-9 col-lg-9 offset-lg-1">
+            <div class="row g-4"> {% for ad in add %}
+                <div class="col-sm-12 col-md-6"> 
+                    <div class="card h-100 shadow-sm border-2 border-start border-primary">
+                        <div class="card-body">
+                            <h5 class="card-title fw-bold text-dark mb-3">
+                                <i class="fas fa-home me-2 text-primary"></i> Address {{ forloop.counter }}
+                            </h5>
+                            <hr class="mt-0">
+                            
+                            <p class="card-text mb-1"><span class="fw-semibold">Name:</span> {{ ad.name }}</p>
+                            <p class="card-text mb-1"><span class="fw-semibold">Locality:</span> {{ ad.locality }}</p>
+                            <p class="card-text mb-1"><span class="fw-semibold">City:</span> {{ ad.city }}</p>
+                            <p class="card-text mb-1"><span class="fw-semibold">State:</span> {{ ad.state }}</p>
+                            <p class="card-text mb-1"><span class="fw-semibold">Pin Code:</span> {{ ad.zipcode }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info text-center" role="alert">
+                        You have no saved addresses.
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock main-content %}

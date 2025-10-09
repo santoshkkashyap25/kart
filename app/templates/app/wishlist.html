@@ -1,0 +1,84 @@
+{% extends 'app/base.html' %}
+{% load static %}
+{% block title %}My Wishlist{% endblock title %}
+
+{% block main-content %}
+<div class="container my-5">
+    <div class="row">
+        <h1 class="text-center mb-5">My Wishlist</h1>
+        
+        {% if wishlist %}
+        <div class="col-12">
+            <div class="row" id="wishlist-row"> 
+            {% for item in wishlist %}
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <a href="{% url 'product-detail' item.product.id %}">
+                        <img src="{{ item.product.product_image.url }}" class="card-img-top" alt="{{ item.product.title }}" style="height: 200px; object-fit: cover;">
+                    </a>
+                    <div class="card-body">
+                        <h5 class="card-title">{{ item.product.title }}</h5>
+                        <p class="text-muted">{{ item.product.brand }}</p>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="h5 mb-0">Rs. {{ item.product.discounted_price }}</span>
+                            <small class="text-muted text-decoration-line-through">Rs. {{ item.product.selling_price }}</small>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <form action="{% url 'add-to-cart' %}" method="GET" class="flex-grow-1">
+                                <input type="hidden" name="prod_id" value="{{ item.product.id }}">
+                                <button type="submit" class="btn btn-primary btn-sm w-100">
+                                    <i class="fas fa-shopping-cart"></i> Add to Cart
+                                </button>
+                            </form>
+                            <button class="btn btn-danger btn-sm remove-wishlist" pid="{{ item.product.id }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12 text-center" id="empty-wishlist-message">
+            <img src="{% static 'app/images/empty-wishlist.png' %}" alt="Empty Wishlist" class="img-fluid mb-3" style="max-width: 300px;">
+            <h3>Your wishlist is empty</h3>
+            <p class="text-muted">Add products you like to your wishlist</p>
+            <a href="{% url 'home' %}" class="btn btn-primary mt-3">Continue Shopping</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+
+$(document).on('click', '.remove-wishlist', function(){
+    var id = $(this).attr("pid");
+    var btn = $(this);
+    
+    $.ajax({
+        type: "GET",
+        url: "{% url 'remove_from_wishlist' %}",
+        data: { prod_id: id },
+        success: function(data) {
+            // Find the parent column element
+            var cardCol = btn.closest('.col-md-3');
+            
+            cardCol.fadeOut(300, function() {
+                $(this).remove(); // Item is now truly removed from the DOM
+                var remainingItems = $('#wishlist-row .col-md-3').length; 
+                
+                if (remainingItems === 0) {
+                    location.reload(); 
+                }
+            });
+        },
+        error: function(xhr) {
+            alert('Failed to remove item from wishlist. Status: ' + xhr.status);
+        }
+    });
+});
+</script>
+
+{% endblock main-content %}

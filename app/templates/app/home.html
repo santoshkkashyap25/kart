@@ -2,40 +2,106 @@
 {% load static %}
 {% block title %}Home{% endblock title %}
 
-
 {% block main-content %}
-<!-- 1st Product Slider -->
-<div class="mx-3">
- <h2>Watches</h2>
- <!-- Slider 1 -->
- <div class="owl-carousel" id="slider1">
-  {% for w in watches %}
-  <a href="{% url 'product-detail' w.id %}" class="btn"><div class="item"><img src="{{w.product_image.url}}" alt="" height="200px"><span class="fw-bold">{{w.title}}</span><br><span class="fs-5">{{w.discounted_price}}</span></div></a>
-  {% endfor %}
-</div>
-<!-- End 1st Product Slider -->
+<div class="container my-5">
 
-<!-- 2nd Product Slider -->
-<div class="mx-3">
- <h2>Mobiles</h2>
- <!-- Slider 2 -->
- <div class="owl-carousel" id="slider2">
-  {% for m in mobiles %}
-  <a href="{% url 'product-detail' m.id %}" class="btn"><div class="item"><img src="{{m.product_image.url}}" alt="" height="200px"><span class="fw-bold">{{m.title}}</span><br><span class="fs-5">{{m.discounted_price}}</span></div></a>
-  {% endfor %}
-</div>
-<!-- End 2nd Product Slider -->
+  <!-- ===== Watches Section ===== -->
+  <div class="category-section mb-5">
+    <h2 class="mb-4 fw-bold">Watches</h2>
+    <div class="owl-carousel owl-theme" id="slider1">
+      {% for w in watches %}
+        <div class="item text-center p-3 border rounded shadow-sm bg-white">
+          <a href="{% url 'product-detail' w.id %}" class="text-decoration-none text-dark">
+            <img src="{{ w.product_image.url }}" alt="{{ w.title }}" class="img-fluid mb-3" style="height: 200px; object-fit: contain;">
+            <h5 class="fw-semibold">{{ w.title }}</h5>
+            <p class="mb-0 text-success fw-bold">₹{{ w.discounted_price }}</p>
+            <small class="text-muted text-decoration-line-through">₹{{ w.selling_price }}</small>
+          </a>
+        </div>
+      {% empty %}
+        <p>No watches available right now.</p>
+      {% endfor %}
+    </div>
+  </div>
 
-<!-- 3rd Product Slider -->
-<div class="mx-3">
- <h2>Headphones</h2>
- <!-- Slider 3 -->
- <div class="owl-carousel" id="slider3">
-  {% for h in headphones %}
-  <a href="{% url 'product-detail' h.id %}" class="btn"><div class="item"><img src="{{h.product_image.url}}" alt="" height="200px"><span class="fw-bold">{{h.title}}</span><br><span class="fs-5">{{h.discounted_price}}</span></div></a>
-  {% endfor %}
-</div>
-<!-- End 3rd Product Slider -->
+  <!-- ===== Mobiles Section ===== -->
+  <div class="category-section mb-5">
+    <h2 class="mb-4 fw-bold">Mobiles</h2>
+    <div class="owl-carousel owl-theme" id="slider2">
+      {% for m in mobiles %}
+        <div class="item text-center p-3 border rounded shadow-sm bg-white">
+          <a href="{% url 'product-detail' m.id %}" class="text-decoration-none text-dark">
+            <img src="{{ m.product_image.url }}" alt="{{ m.title }}" class="img-fluid mb-3" style="height: 200px; object-fit: contain;">
+            <h5 class="fw-semibold">{{ m.title }}</h5>
+            <p class="mb-0 text-success fw-bold">₹{{ m.discounted_price }}</p>
+            <small class="text-muted text-decoration-line-through">₹{{ m.selling_price }}</small>
+          </a>
+        </div>
+      {% empty %}
+        <p>No mobiles available right now.</p>
+      {% endfor %}
+    </div>
+  </div>
 
+  <!-- ===== Headphones Section ===== -->
+  <div class="category-section mb-5">
+    <h2 class="mb-4 fw-bold">Headphones</h2>
+    <div class="owl-carousel owl-theme" id="slider3">
+      {% for h in headphones %}
+        <div class="item text-center p-3 border rounded shadow-sm bg-white">
+          <a href="{% url 'product-detail' h.id %}" class="text-decoration-none text-dark">
+            <img src="{{ h.product_image.url }}" alt="{{ h.title }}" class="img-fluid mb-3" style="height: 200px; object-fit: contain;">
+            <h5 class="fw-semibold">{{ h.title }}</h5>
+            <p class="mb-0 text-success fw-bold">₹{{ h.discounted_price }}</p>
+            <small class="text-muted text-decoration-line-through">₹{{ h.selling_price }}</small>
+          </a>
+        </div>
+      {% empty %}
+        <p>No headphones available right now.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ===== Recently Viewed Section ===== -->
+  {% if recently_viewed %}
+  <div class="category-section mb-5">
+    <h2 class="mb-4 fw-bold">Recently Viewed</h2>
+    <div class="owl-carousel owl-theme" id="recentlyViewedSlider">
+      {% for p in recently_viewed %}
+        <div class="item text-center p-3 border rounded shadow-sm bg-light">
+          <a href="{% url 'product-detail' p.id %}" class="text-decoration-none text-dark">
+            <img src="{{ p.product_image.url }}" alt="{{ p.title }}" class="img-fluid mb-3" style="height: 200px; object-fit: contain;">
+            <h5 class="fw-semibold">{{ p.title }}</h5>
+            <p class="mb-0 text-success fw-bold">₹{{ p.discounted_price }}</p>
+            <small class="text-muted text-decoration-line-through">₹{{ p.selling_price }}</small>
+          </a>
+        </div>
+      {% empty %}
+        <p>No recently viewed products.</p>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
 {% endblock main-content %}
 
+{% block scripts %}
+<script>
+  $(document).ready(function(){
+    $('#slider1, #slider2, #slider3, #recentlyViewedSlider').owlCarousel({
+      loop:true,
+      margin:15,
+      nav:true,
+      dots:false,
+      autoplay:true,
+      autoplayTimeout:1000,
+      responsive:{
+        0:{ items:1 },
+        600:{ items:3 },
+        1000:{ items:5 }
+      }
+    });
+  });
+</script>
+{% endblock scripts %}

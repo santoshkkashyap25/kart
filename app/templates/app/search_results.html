@@ -1,0 +1,215 @@
+{% extends 'app/base.html' %}
+{% load static %}
+{% block title %}Search Results{% endblock title %}
+{% block main-content %}
+<div class="container my-5">
+ <div class="row">
+  <!-- Filter Sidebar -->
+  <div class="col-md-3">
+   <div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+     <h5 class="mb-0"><i class="fas fa-filter"></i> Filters</h5>
+    </div>
+    <div class="card-body">
+     <form method="GET" action="{% url 'search' %}">
+      <!-- Search Query -->
+      <div class="mb-3">
+       <label class="form-label fw-bold">Search</label>
+       <input type="text" class="form-control" name="q" value="{{ query }}" placeholder="Search products...">
+      </div>
+      
+      <!-- Category Filter -->
+      <div class="mb-3">
+       <label class="form-label fw-bold">Category</label>
+       <select class="form-select" name="category">
+        <option value="">All Categories</option>
+        <option value="M" {% if category == 'M' %}selected{% endif %}>Mobile</option>
+        <option value="L" {% if category == 'L' %}selected{% endif %}>Laptop</option>
+        <option value="W" {% if category == 'W' %}selected{% endif %}>Watches</option>
+        <option value="H" {% if category == 'H' %}selected{% endif %}>Headphones</option>
+       </select>
+      </div>
+      
+      <!-- Price Range -->
+      <div class="mb-3">
+       <label class="form-label fw-bold">Price Range</label>
+       <div class="input-group mb-2">
+        <span class="input-group-text">Min</span>
+        <input type="number" class="form-control" name="min_price" placeholder="0" value="{{ request.GET.min_price }}">
+       </div>
+       <div class="input-group">
+        <span class="input-group-text">Max</span>
+        <input type="number" class="form-control" name="max_price" placeholder="100000" value="{{ request.GET.max_price }}">
+       </div>
+      </div>
+      
+      <!-- Quick Price Filters -->
+      <div class="mb-3">
+       <label class="form-label fw-bold">Quick Filters</label>
+       <div class="d-grid gap-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPriceRange(0, 5000)">Under ₹5,000</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPriceRange(5000, 10000)">₹5,000 - ₹10,000</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPriceRange(10000, 20000)">₹10,000 - ₹20,000</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setPriceRange(20000, 999999)">Above ₹20,000</button>
+       </div>
+      </div>
+      
+      <!-- Sort By -->
+      <div class="mb-3">
+       <label class="form-label fw-bold">Sort By</label>
+       <select class="form-select" name="sort">
+        <option value="newest">Newest First</option>
+        <option value="price_low" {% if request.GET.sort == 'price_low' %}selected{% endif %}>Price: Low to High</option>
+        <option value="price_high" {% if request.GET.sort == 'price_high' %}selected{% endif %}>Price: High to Low</option>
+        <option value="popular" {% if request.GET.sort == 'popular' %}selected{% endif %}>Most Popular</option>
+       </select>
+      </div>
+      
+      <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+      <a href="{% url 'search' %}" class="btn btn-outline-secondary w-100 mt-2">Clear All</a>
+     </form>
+    </div>
+   </div>
+  </div>
+  
+  <!-- Products Grid -->
+  <div class="col-md-9">
+   <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+     {% if query %}
+      Results for "{{ query }}"
+     {% else %}
+      All Products
+     {% endif %}
+     <small class="text-muted">({{ total_results }} found)</small>
+    </h2>
+   </div>
+   
+   {% if products %}
+   <div class="row">
+    {% for product in products %}
+    <div class="col-md-4 col-sm-6 mb-4">
+     <div class="card h-100 shadow-sm product-card">
+      {% if product.is_new_arrival %}
+      <span class="badge bg-success position-absolute" style="top: 10px; right: 10px; z-index: 1;">New</span>
+      {% endif %}
+      {% if product.is_bestseller %}
+      <span class="badge bg-warning position-absolute" style="top: 10px; left: 10px; z-index: 1;">Bestseller</span>
+      {% endif %}
+      
+      <a href="{% url 'product-detail' product.id %}">
+       <img src="{{ product.product_image.url }}" class="card-img-top" alt="{{ product.title }}" style="height: 200px; object-fit: cover;">
+      </a>
+      
+      <div class="card-body">
+       <h5 class="card-title">{{ product.title|truncatewords:5 }}</h5>
+       <p class="text-muted small">{{ product.brand }}</p>
+       
+       {% if product.reviews.count > 0 %}
+       <div class="mb-2">
+        <span class="text-warning">
+         {% for i in "12345" %}
+          {% if forloop.counter <= product.average_rating %}
+           <i class="fas fa-star"></i>
+          {% else %}
+           <i class="far fa-star"></i>
+          {% endif %}
+         {% endfor %}
+        </span>
+        <small class="text-muted">({{ product.reviews.count }} reviews)</small>
+       </div>
+       {% endif %}
+       
+       <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+         <span class="h5 text-success mb-0">₹{{ product.discounted_price }}</span>
+         <br>
+         <small class="text-muted text-decoration-line-through">₹{{ product.selling_price }}</small>
+        <small class="text-success ms-1">{{ product.discount_percent }}% off</small>
+        </div>
+       </div>
+       
+       <div class="btn-group w-100" role="group">
+        <a href="{% url 'product-detail' product.id %}" class="btn btn-outline-primary btn-sm">View</a>
+        {% if request.user.is_authenticated %}
+        <button class="btn btn-outline-danger btn-sm add-wishlist" pid="{{ product.id }}">
+         <i class="far fa-heart"></i>
+        </button>
+        {% endif %}
+       </div>
+      </div>
+     </div>
+    </div>
+    {% endfor %}
+   </div>
+   
+   <!-- Pagination -->
+   {% if products.has_other_pages %}
+   <nav aria-label="Page navigation">
+    <ul class="pagination justify-content-center">
+     {% if products.has_previous %}
+     <li class="page-item">
+      <a class="page-link" href="?page={{ products.previous_page_number }}&q={{ query }}&category={{ category }}&sort={{ request.GET.sort }}">Previous</a>
+     </li>
+     {% endif %}
+     
+     {% for num in products.paginator.page_range %}
+      {% if products.number == num %}
+      <li class="page-item active"><a class="page-link">{{ num }}</a></li>
+      {% elif num > products.number|add:'-3' and num < products.number|add:'3' %}
+      <li class="page-item"><a class="page-link" href="?page={{ num }}&q={{ query }}&category={{ category }}&sort={{ request.GET.sort }}">{{ num }}</a></li>
+      {% endif %}
+     {% endfor %}
+     
+     {% if products.has_next %}
+     <li class="page-item">
+      <a class="page-link" href="?page={{ products.next_page_number }}&q={{ query }}&category={{ category }}&sort={{ request.GET.sort }}">Next</a>
+     </li>
+     {% endif %}
+    </ul>
+   </nav>
+   {% endif %}
+   
+   {% else %}
+   <div class="text-center py-5">
+    <i class="fas fa-search fa-5x text-muted mb-3"></i>
+    <h3>No products found</h3>
+    <p class="text-muted">Try adjusting your filters or search terms</p>
+    <a href="{% url 'home' %}" class="btn btn-primary">Browse All Products</a>
+   </div>
+   {% endif %}
+  </div>
+ </div>
+</div>
+
+<script>
+function setPriceRange(min, max) {
+    document.querySelector('input[name="min_price"]').value = min;
+    document.querySelector('input[name="max_price"]').value = max;
+}
+
+$('.add-wishlist').click(function(){
+    var id = $(this).attr("pid");
+    $.ajax({
+        type: "GET",
+        url: "{% url 'add_to_wishlist' %}",
+        data: {
+            prod_id: id
+        },
+        success: function() {
+            alert('Added to wishlist!');
+        }
+    });
+});
+</script>
+
+<style>
+.product-card {
+    transition: transform 0.2s;
+}
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
+}
+</style>
+{% endblock main-content %}

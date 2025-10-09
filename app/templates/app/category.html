@@ -1,0 +1,42 @@
+{% extends 'app/base.html' %}
+{% load static %}
+{% block title %}{{ category_name }}{% endblock title %}
+
+{% block main-content %}
+<div class="container my-5">
+  <div class="row">
+    <!-- Sidebar Filters -->
+    <div class="col-sm-3 mb-3">
+      <div class="list-group">
+        <a href="{{ all_url }}" class="list-group-item list-group-item-action {% if filter_type == 'all' %}active{% endif %}">All {{ category_name }}</a>
+        <a href="{{ below_url }}" class="list-group-item list-group-item-action {% if filter_type == 'below' %}active{% endif %}">Below {{ below_price|default:"-" }}</a>
+        <a href="{{ above_url }}" class="list-group-item list-group-item-action {% if filter_type == 'above' %}active{% endif %}">Above {{ below_price|default:"-" }}</a>
+      </div>
+    </div>
+
+    <!-- Product Grid -->
+    <div class="col-sm-9">
+      <div class="row">
+        {% for product in products %}
+        <div class="col-md-4 col-sm-6 text-center mb-4">
+          <a href="{% url 'product-detail' product.id %}" class="text-decoration-none text-dark">
+            <div class="card h-100">
+              <img src="{{ product.product_image.url }}" class="card-img-top p-3" alt="{{ product.title }}">
+              <div class="card-body">
+                <h6 class="card-title fw-bold">{{ product.title }}</h6>
+                <p class="card-text">
+                  <span class="fw-bold">Rs. {{ product.discounted_price }}</span>
+                  <small class="text-muted text-decoration-line-through">Rs. {{ product.selling_price }}</small>
+                </p>
+              </div>
+            </div>
+          </a>
+        </div>
+        {% empty %}
+        <p class="text-center">No {{ category_name }} found.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock main-content %}

@@ -1,0 +1,127 @@
+{% extends 'app/base.html' %}
+{% load static %}
+{% block title %}Track Order #{{ order.id }}{% endblock title %}
+
+{% block main-content %}
+<div class="container my-5">
+  <div class="row">
+    <!-- Sidebar (optional summary) -->
+    <div class="col-md-4">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0"><i class="fas fa-receipt"></i> Order Summary</h5>
+        </div>
+        <div class="card-body">
+          <p><strong>Order ID:</strong> {{ order.id }}</p>
+          <p><strong>Date:</strong> {{ order.ordered_date|date:"d M Y, H:i" }}</p>
+          <p><strong>Status:</strong> 
+            <span class="badge 
+              {% if order.status == 'Delivered' %} bg-success 
+              {% elif order.status == 'On The Way' %} bg-info 
+              {% elif order.status == 'Packed' %} bg-warning 
+              {% else %} bg-secondary {% endif %}">
+              {{ order.status }}
+            </span>
+          </p>
+          <hr>
+          <p><strong>Product:</strong> {{ order.product.title }}</p>
+          <p><strong>Quantity:</strong> {{ order.quantity }}</p>
+          <p><strong>Total:</strong> ₹{{ order.total_cost }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-md-8">
+      <!-- Order Status Timeline -->
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0"><i class="fas fa-shipping-fast"></i> Order Progress</h5>
+        </div>
+        <div class="card-body">
+          <div class="timeline d-flex justify-content-between align-items-center position-relative">
+            {% for step in status_timeline %}
+              <div class="text-center position-relative flex-fill">
+                <div class="circle {% if step.completed %}completed{% endif %}">
+                  {% if step.completed %}
+                    <i class="fas fa-check text-white"></i>
+                  {% else %}
+                    <i class="fas fa-circle text-muted"></i>
+                  {% endif %}
+                </div>
+                <p class="mt-2 fw-bold">{{ step.status }}</p>
+              </div>
+              {% if not forloop.last %}
+                <div class="line {% if step.completed %}completed{% endif %}"></div>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Tracking Updates -->
+      <div class="card shadow-sm">
+        <div class="card-header bg-secondary text-white">
+          <h5 class="mb-0"><i class="fas fa-map-marker-alt"></i> Tracking Updates</h5>
+        </div>
+        <div class="card-body">
+          {% if order.tracking.all %}
+            <ul class="list-group list-group-flush">
+              {% for t in order.tracking.all %}
+              <li class="list-group-item">
+                <div class="d-flex justify-content-between">
+                  <div>
+                    <strong>{{ t.status }}</strong>
+                    {% if t.location %}
+                      <br><small class="text-muted"><i class="fas fa-map-pin"></i> {{ t.location }}</small>
+                    {% endif %}
+                    {% if t.notes %}
+                      <br><small>{{ t.notes }}</small>
+                    {% endif %}
+                  </div>
+                  <small class="text-muted">{{ t.updated_at|date:"d M, H:i" }}</small>
+                </div>
+              </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="text-center text-muted my-4">No tracking updates yet.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Timeline Styles */
+.timeline {
+  position: relative;
+  padding: 20px 0;
+}
+.circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #dee2e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: auto;
+  z-index: 2;
+}
+.circle.completed {
+  background: #28a745;
+}
+.line {
+  height: 4px;
+  background: #dee2e6;
+  flex: 1;
+  margin: 0 5px;
+  z-index: 1;
+}
+.line.completed {
+  background: #28a745;
+}
+</style>
+{% endblock main-content %}

@@ -1,34 +1,76 @@
 {% extends 'app/base.html' %}
 {% load static %}
-{% block title %}Profile{% endblock title %}
+{% block title %}Profile | {{ request.user|capfirst }}{% endblock title %}
+
 {% block main-content %}
 <div class="container my-5">
- <div class="row">
-  <h3>Welcome <span class="text-capitalize">{{request.user}}</span> </h3>
-  <div class="col-sm-2 border-end">
-   <ul class="list-unstyled">
-    <li class="d-grid"><a href="{% url 'profile' %}" class="btn {{active}}">Profile</a></li>
-    <li class="d-grid"><a href="{% url 'address' %}" class="btn">Address</a></li>
-   </ul>
-  </div>
-  <div class="col-sm-8 offset-sm-1">
-   <form action="" method="post" novalidate>
-    {% csrf_token %}
-     {% for fm in form %}
-      <div class="form-group col-lg-6 mb-3">
-         {{fm.label_tag}}{{fm}}<small class="text-danger">{{fm.errors|striptags}}</small><br>
-      </div>
-      {% endfor %}
-      <div class="col-12 mt-3">
-        <button type="submit" class="btn btn-primary mb-3">Submit</button>
-      </div>
-    </form>
-      {% if messages %}
-      {% for message in messages %}
-      <p {% if message.tags %} class="alert alert-{{message.tags}} mb-5" {% endif %}>{{message}}}</p>
-      {% endfor %}
-      {% endif %}
-  </div>
- </div>
+    <div class="row">
+        <div class="col-12 mb-4">
+            <h2 class="fw-bold text-center text-primary">
+                My Profile 
+                <span class="text-secondary fs-5">- Welcome {{ request.user|capfirst }}</span>
+            </h2>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-3 col-lg-2">
+            <div class="list-group shadow-sm">
+                <a href="{% url 'profile' %}" 
+                   class="list-group-item list-group-item-action {% if active == 'profile' %}active{% endif %}" 
+                   aria-current="true">
+                    <i class="fas fa-user me-2"></i> Profile
+                </a>
+                <a href="{% url 'address' %}" 
+                   class="list-group-item list-group-item-action {% if active == 'address' %}active{% endif %}">
+                    <i class="fas fa-map-marker-alt me-2"></i> Address
+                </a>
+            </div>
+        </div>
+
+        <div class="col-md-9 col-lg-8 offset-lg-1">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-bottom fw-bold fs-5 text-primary">
+                    Update Profile Information
+                </div>
+                <div class="card-body">
+                    <form action="" method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row g-3">
+                            {% for fm in form %}
+                            <div class="form-group col-lg-6">
+                                {{ fm.label_tag }}
+                                
+                                <input type="{{ fm.field.widget.input_type|default:'text' }}" 
+                                       class="form-control" 
+                                       id="{{ fm.id_for_label }}" 
+                                       name="{{ fm.name }}" 
+                                       value="{{ fm.value|default_if_none:'' }}" 
+                                       {% if fm.field.required %}required{% endif %}>
+                                
+                                <small class="text-danger mt-1 d-block">{{ fm.errors|striptags }}</small>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if messages %}
+              {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} mt-4 mb-0" role="alert">
+                    {{ message }}
+                </div>
+              {% endfor %}
+            {% endif %}
+        </div>
+    </div>
 </div>
 {% endblock main-content %}
