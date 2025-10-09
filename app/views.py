@@ -1,26 +1,42 @@
-from django.shortcuts import render ,redirect
 from django.views import View
-from .models import Customer, Product,Cart,OrderPlaced
-from .forms import CustomerRegistrationForm
 from django.contrib import messages
 from .forms import CustomerProfileForm
 from django.db.models import Q
 from django.http import JsonResponse 
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
+from django.shortcuts import render, redirect, get_object_or_404
+from django.db.models import Q, Avg, Count
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+from django.http import JsonResponse
+from django.db.models import Case, When
+from django.core.paginator import Paginator
+from django.http import Http404
+from django.template.loader import render_to_string
+from .models import *
+from .forms import *
+import json
 
 class ProductView(View):
-    def get(self,request):
-        totalitem=0
-        laptops=Product.objects.filter(category='L')
-        watches=Product.objects.filter(category='W')
-        mobiles=Product.objects.filter(category='M')
-        headphones=Product.objects.filter(category='H')
-        if request.user.is_authenticated:
-            totalitem=len(Cart.objects.filter(user=request.user))
-        return render(request,'app/home.html',
-            {'laptops':laptops,'watches':watches,'mobiles':mobiles,'headphones':headphones,'totalitem':totalitem})
+    def get(self, request):
+        totalitem = 0
+        laptops = Product.objects.filter(category='L').distinct()
+        watches = Product.objects.filter(category='W').distinct()
+        mobiles = Product.objects.filter(category='M').distinct()
+        headphones = Product.objects.filter(category='H').distinct()
 
+        if request.user.is_authenticated:
+            totalitem = Cart.objects.filter(user=request.user).count()
+
+        return render(request, 'app/home.html', {
+            'laptops': laptops,
+            'watches': watches,
+            'mobiles': mobiles,
+            'headphones': headphones,
+            'totalitem': totalitem
+        })
 
 class ProductDetailView(View):
     def get(self,request,pk):
@@ -106,27 +122,34 @@ def minus_cart(request):
 
         return JsonResponse(data)
 
+@login_required
 def remove_cart(request):
     if request.method == 'GET':
-        prod_id = request.GET['prod_id']
-        c = Cart.objects.get(Q(product=prod_id) & Q(user=request.user))
-        c.quantity += 1
-        c.delete()
-        amount = 0.0
-        shipping_amount = 70.0
-        cart_product = [p for p in Cart.objects.all() if p.user == request.user]
-        for p in cart_product:
-            tempamount = (p.quantity * p.product.discounted_price)
-            amount += tempamount
-    
+        prod_id = request.GET.get('prod_id')
+        Cart.objects.filter(user=request.user, product_id=prod_id).delete()
+        
+        # Check if user still has items in cart
+        cart_items = Cart.objects.filter(user=request.user)
+        totalitem = cart_items.count()
+        if cart_items.exists():
+            amount = sum(p.quantity * p.product.discounted_price for p in cart_items)
+            shipping_amount = 70.0
+            total_amount = amount + shipping_amount
 
-        data = {
-            'amount': amount,
-            'total_amount': amount + shipping_amount
-        }
-
+            data = {
+                'status': 'success',
+                'amount': amount,
+                'total_amount': total_amount,
+            }
+        else:
+            # Render the empty cart HTML
+            empty_html = render_to_string('app/emptycart_message.html', {'totalitem': totalitem})
+            data = {
+                'status': 'empty',
+                'html': empty_html,
+            }
+        
         return JsonResponse(data)
-
 
 
 @login_required # as it is function based
@@ -139,16 +162,47 @@ def orders(request):
     op=OrderPlaced.objects.filter(user=request.user)
     return render(request,'app/orders.html',{'order_placed':op})
 
+# Maps for display
+category_name_map = {
+    'M': 'Mobile',
+    'L': 'Laptop',
+    'W': 'Watch',
+    'H': 'Headphone',
+}
 
-def mobile(request,data=None):
-    if data==None:
-        mobiles=Product.objects.filter(category='M')
-    elif data=='below':
-        mobiles=Product.objects.filter(category='M').filter(discounted_price__lt=10000)
-    elif data=='above':
-        mobiles=Product.objects.filter(category='M').filter(discounted_price__gt=10000)
+price_map = {
+    'M': 10000,
+    'L': 50000,
+    'W': 5000,
+    'H': 2000,
+}
 
-    return render(request, 'app/mobile.html',{'mobiles':mobiles})
+def category_view(request, category, filter_type='all'):
+    category = category.upper()  # normalize category to uppercase
+
+    # Ensure category exists
+    if category not in category_name_map:
+        raise Http404("Category does not exist")
+
+    products = Product.objects.filter(category=category)
+
+    # Filter by price
+    if filter_type == 'below':
+        products = products.filter(discounted_price__lt=price_map[category])
+    elif filter_type == 'above':
+        products = products.filter(discounted_price__gte=price_map[category])
+
+    context = {
+        'category_name': category_name_map[category],
+        'products': products,
+        'filter_type': filter_type,
+        'all_url': f"/{category.lower()}",
+        'below_url': f"/{category.lower()}/below",
+        'above_url': f"/{category.lower()}/above",
+        'below_price': price_map.get(category),
+    }
+    return render(request, 'app/category.html', context)
+
 
 class CustomerRegistrationView(View):
     def get(self,request):
@@ -211,3 +265,330 @@ class ProfileView(View):
             reg.save()
             messages.success(request, 'Your profile has been updated successfully!')
         return render(request, 'app/profile.html', {'form': form, 'active': 'btn-primary'})
+
+
+
+# ============= WISHLIST FEATURE =============
+@login_required
+def add_to_wishlist(request):
+    """Add product to user's wishlist"""
+    if request.method == 'GET':
+        prod_id = request.GET.get('prod_id')
+        product = Product.objects.get(id=prod_id)
+        user = request.user
+        
+        # Check if already in wishlist
+        wishlist_item = Wishlist.objects.filter(user=user, product=product)
+        if wishlist_item.exists():
+            messages.info(request, 'Product already in wishlist')
+        else:
+            Wishlist.objects.create(user=user, product=product)
+            messages.success(request, 'Product added to wishlist')
+        
+        return redirect(request.META.get('HTTP_REFERER', 'home'))
+
+
+@login_required
+def show_wishlist(request):
+    """Display user's wishlist"""
+    user = request.user
+    wishlist = Wishlist.objects.filter(user=user).select_related('product')
+    totalitem = Cart.objects.filter(user=user).count() if user.is_authenticated else 0
+    
+    return render(request, 'app/wishlist.html', {
+        'wishlist': wishlist,
+        'totalitem': totalitem
+    })
+
+
+@login_required
+def remove_from_wishlist(request):
+    """Remove product from wishlist"""
+    if request.method == 'GET':
+        prod_id = request.GET.get('prod_id')
+        Wishlist.objects.filter(user=request.user, product_id=prod_id).delete()
+        return JsonResponse({'status': 'success'})
+
+
+# ============= PRODUCT REVIEW FEATURE =============
+@login_required
+def add_review(request, pk):
+    """Add review for a product"""
+    if request.method == 'POST':
+        product = Product.objects.get(pk=pk)
+        rating = request.POST.get('rating')
+        comment = request.POST.get('comment')
+        
+        # Check if user already reviewed
+        existing_review = Review.objects.filter(user=request.user, product=product)
+        if existing_review.exists():
+            messages.warning(request, 'You have already reviewed this product')
+        else:
+            Review.objects.create(
+                user=request.user,
+                product=product,
+                rating=rating,
+                comment=comment
+            )
+            messages.success(request, 'Review submitted successfully')
+        
+        return redirect('product-detail', pk=pk)
+
+
+# ============= ADVANCED SEARCH & FILTER =============
+class ProductSearchView(View):
+    """Advanced product search with filters"""
+    
+    def get(self, request):
+        query = request.GET.get('q', '')
+        category = request.GET.get('category', '')
+        min_price = request.GET.get('min_price', '')
+        max_price = request.GET.get('max_price', '')
+        sort_by = request.GET.get('sort', 'newest')
+        
+        products = Product.objects.all()
+        
+        # Search by title, description, or brand
+        if query:
+            products = products.filter(
+                Q(title__icontains=query) |
+                Q(description__icontains=query) |
+                Q(brand__icontains=query)
+            )
+        
+        # Filter by category
+        if category:
+            products = products.filter(category=category)
+        
+        # Filter by price range
+        if min_price:
+            products = products.filter(discounted_price__gte=min_price)
+        if max_price:
+            products = products.filter(discounted_price__lte=max_price)
+        
+        # Sorting
+        if sort_by == 'price_low':
+            products = products.order_by('discounted_price')
+        elif sort_by == 'price_high':
+            products = products.order_by('-discounted_price')
+        elif sort_by == 'popular':
+            products = products.annotate(
+                order_count=Count('orderplaced')
+            ).order_by('-order_count')
+        else:  # newest
+            products = products.order_by('-id')
+        
+        # Pagination
+        paginator = Paginator(products, 12)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        
+        totalitem = 0
+        if request.user.is_authenticated:
+            totalitem = Cart.objects.filter(user=request.user).count()
+        
+        context = {
+            'products': page_obj,
+            'query': query,
+            'category': category,
+            'totalitem': totalitem,
+            'total_results': products.count()
+        }
+        
+        return render(request, 'app/search_results.html', context)
+
+
+# ============= PRODUCT RECOMMENDATIONS =============
+def get_recommended_products(user, product=None, limit=4):
+    """Get personalized product recommendations"""
+    
+    if product:
+        # Related products from same category and brand
+        related = Product.objects.filter(
+            category=product.category
+        ).exclude(id=product.id).order_by('?')[:limit]
+        return related
+    
+    if user.is_authenticated:
+        # Get user's order history
+        ordered_products = OrderPlaced.objects.filter(
+            user=user
+        ).values_list('product__category', flat=True)
+        
+        if ordered_products:
+            # Recommend from categories user has ordered from
+            recommended = Product.objects.filter(
+                category__in=ordered_products
+            ).order_by('?')[:limit]
+            return recommended
+    
+    # Default: Popular products
+    return Product.objects.annotate(
+        order_count=Count('orderplaced')
+    ).order_by('-order_count')[:limit]
+
+
+# ============= ENHANCED PRODUCT DETAIL =============
+class ProductDetailView(View):
+    """Product detail with reviews and recommendations"""
+    
+    def get(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+        reviews = Review.objects.filter(product=product).select_related('user')
+        
+        # Calculate average rating
+        avg_rating = reviews.aggregate(Avg('rating'))['rating__avg'] or 0
+        rating_distribution = {i: reviews.filter(rating=i).count() for i in range(1, 6)}
+        
+        # Check if in wishlist
+        in_wishlist = False
+        item_already_in_cart = False
+        totalitem = 0
+        
+        if request.user.is_authenticated:
+            totalitem = Cart.objects.filter(user=request.user).count()
+            in_wishlist = Wishlist.objects.filter(
+                user=request.user, product=product
+            ).exists()
+            item_already_in_cart = Cart.objects.filter(
+                Q(product=product.id) & Q(user=request.user)
+            ).exists()
+        
+        # Get recommendations
+        recommended_products = get_recommended_products(request.user, product)
+        
+        # Get related products (same category)
+        related_products = Product.objects.filter(
+            category=product.category
+        ).exclude(id=product.id)[:4]
+        
+        context = {
+            'product': product,
+            'reviews': reviews,
+            'avg_rating': round(avg_rating, 1),
+            'total_reviews': reviews.count(),
+            'rating_distribution': rating_distribution,
+            'in_wishlist': in_wishlist,
+            'item_already_in_cart': item_already_in_cart,
+            'totalitem': totalitem,
+            'recommended_products': recommended_products,
+            'related_products': related_products,
+        }
+        
+        return render(request, 'app/productdetail.html', context)
+
+
+# ============= ORDER TRACKING =============
+@login_required
+def track_order(request, order_id):
+    """Track order status with timeline"""
+    order = get_object_or_404(OrderPlaced, id=order_id, user=request.user)
+    
+    # Order status timeline
+    status_timeline = [
+        {'status': 'Accepted', 'completed': order.status in ['Accepted', 'Packed', 'On The Way', 'Delivered']},
+        {'status': 'Packed', 'completed': order.status in ['Packed', 'On The Way', 'Delivered']},
+        {'status': 'On The Way', 'completed': order.status in ['On The Way', 'Delivered']},
+        {'status': 'Delivered', 'completed': order.status == 'Delivered'},
+    ]
+    
+    totalitem = Cart.objects.filter(user=request.user).count()
+    
+    return render(request, 'app/track_order.html', {
+        'order': order,
+        'status_timeline': status_timeline,
+        'totalitem': totalitem
+    })
+
+
+# ============= CANCEL ORDER =============
+@login_required
+def cancel_order(request, order_id):
+    """Cancel an order if not yet shipped"""
+    order = get_object_or_404(OrderPlaced, id=order_id, user=request.user)
+    
+    if order.status in ['Accepted', 'Pending']:
+        order.status = 'Cancel'
+        order.save()
+        messages.success(request, 'Order cancelled successfully')
+    else:
+        messages.error(request, 'Order cannot be cancelled at this stage')
+    
+    return redirect('orders')
+
+
+# ============= RECENTLY VIEWED PRODUCTS =============
+def add_to_recently_viewed(request, product_id):
+    """Track recently viewed products in session"""
+    recently_viewed = request.session.get('recently_viewed', [])
+    
+    if product_id in recently_viewed:
+        recently_viewed.remove(product_id)
+    
+    recently_viewed.insert(0, product_id)
+    recently_viewed = recently_viewed[:10]  # Keep only last 10
+
+    # Save only if it actually changed
+    if request.session.get('recently_viewed') != recently_viewed:
+        request.session['recently_viewed'] = recently_viewed
+        request.session.modified = True
+
+
+@login_required
+def show_recently_viewed(request):
+    recently_viewed_ids = request.session.get('recently_viewed', [])
+    preserved = Case(*[When(pk=pk, then=pos) for pos, pk in enumerate(recently_viewed_ids)])
+    products = Product.objects.filter(id__in=recently_viewed_ids).order_by(preserved)
+    
+    totalitem = Cart.objects.filter(user=request.user).count() if request.user.is_authenticated else 0
+    
+    return render(request, 'app/recently_viewed.html', {
+        'products': products,
+        'totalitem': totalitem
+    })
+
+
+# ============= PRODUCT QUICK VIEW (AJAX) =============
+def product_quick_view(request, pk):
+    """Quick view product details in modal"""
+    product = get_object_or_404(Product, pk=pk)
+    
+    data = {
+        'id': product.id,
+        'title': product.title,
+        'description': product.description,
+        'selling_price': product.selling_price,
+        'discounted_price': product.discounted_price,
+        'brand': product.brand,
+        'image_url': product.product_image.url,
+    }
+    
+    return JsonResponse(data)
+
+
+# ============= EXPORT ORDER HISTORY =============
+@login_required
+def export_order_history(request):
+    """Export order history as CSV"""
+    import csv
+    from django.http import HttpResponse
+    
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="order_history.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow(['Order ID', 'Product', 'Quantity', 'Price', 'Status', 'Date'])
+    
+    orders = OrderPlaced.objects.filter(user=request.user).select_related('product')
+    
+    for order in orders:
+        writer.writerow([
+            order.id,
+            order.product.title,
+            order.quantity,
+            order.total_cost,
+            order.status,
+            order.ordered_date.strftime('%Y-%m-%d')
+        ])
+    
+    return response
