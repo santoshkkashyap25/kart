@@ -2,8 +2,6 @@
 
 > A full-stack e-commerce platform built with Django, featuring 110+ advanced features, security, and enterprise-grade architecture.
 
-<!-- [Live Demo](https://kart-demo.herokuapp.com) -->
-
 ---
 
 ## Screenshots
@@ -13,10 +11,6 @@
     <td><img src="screenshots/home.jpg" alt="Homepage" width="400"/><br/><sub><b>Homepage</b></sub></td>
     <td><img src="screenshots/product.jpg" alt="Product Detail" width="400"/><br/><sub><b>Product Detail</b></sub></td>
     <td><img src="screenshots/filter.jpg" alt="Search & Filter" width="400"/><br/><sub><b>Search & Filter</b></sub></td>
-  </tr>
-  <tr>
-    <td><img src="screenshots/cart.jpg" alt="Shopping Cart" width="400"/><br/><sub><b>Shopping Cart</b></sub></td>
-    <td><img src="screenshots/admin.jpg" alt="Admin Dashboard" width="400"/><br/><sub><b>Admin Dashboard</b></sub></td>
   </tr>
 </table>
 
@@ -84,69 +78,15 @@ python manage.py runserver
 ```
 
 ---
-## Testing
+## 🧪 Testing
+
+The project includes a robust test suite covering models, views, and forms.
 
 ```bash
-# Run all tests
-python manage.py test
+# Run all tests (inside Docker)
+docker-compose exec web python manage.py test
 
-# Run with coverage
-coverage run --source='.' manage.py test
-coverage report
-coverage html  # Generate HTML report
-
-# Run specific test suite
+# Run specific suites (Local)
+python manage.py test app.tests.test_models
 python manage.py test app.tests.test_views
 ```
-
-<!-- ## Performance Benchmarks
-
-- **Response Time**: < 200ms (95th percentile)
-- **Throughput**: 1000+ requests/second
-- **Database Queries**: < 10 queries per page load
-- **Page Load Time**: < 2 seconds (including assets)
-- **Uptime**: 99.9% availability -->
-
-
-<!-- ## Monitoring & Maintenance
-
-### Health Check
-```bash
-curl http://localhost:8000/health/
-```
-
-### Database Backup
-```bash
-python manage.py dbbackup
-```
-
-### Cache Clear
-```bash
-python manage.py clear_cache
-``` -->
-<!-- 
-## API Documentation
-
-API documentation is available at:
-- Swagger UI: `http://localhost:8000/api/docs/`
-- ReDoc: `http://localhost:8000/api/redoc/`
- -->
-<!-- ### Example API Endpoints
-
-```bash
-# Get products
-GET /api/v1/products/
-
-# Get product detail
-GET /api/v1/products/{id}/
-
-# Add to cart
-POST /api/v1/cart/add/
-
-# Get cart
-GET /api/v1/cart/
-
-# Place order
-POST /api/v1/orders/
-```
- -->

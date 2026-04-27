@@ -161,14 +161,14 @@ class CartViewTestCase(TestCase):
 
     def test_add_to_cart_requires_login(self):
         """Test add to cart redirects to login for anonymous users"""
-        response = self.client.get(reverse('add-to-cart'), {'prod_id': self.product1.id})
+        response = self.client.post(reverse('add-to-cart'), {'prod_id': self.product1.id})
         self.assertEqual(response.status_code, 302)
         self.assertIn('/accounts/login/', response.url)
     
     def test_add_to_cart_success(self):
         """Test successfully adding product to cart"""
         self.client.login(username='testuser', password='testpass123')
-        response = self.client.get(reverse('add-to-cart'), {'prod_id': self.product1.id})
+        response = self.client.post(reverse('add-to-cart'), {'prod_id': self.product1.id})
         
         self.assertEqual(response.status_code, 302)  # Redirect
         self.assertEqual(Cart.objects.filter(user=self.user).count(), 1)
@@ -204,7 +204,7 @@ class CartViewTestCase(TestCase):
         self.client.login(username='testuser', password='testpass123')
         cart_item = Cart.objects.create(user=self.user, product=self.product1, quantity=1)
         
-        response = self.client.get(reverse('plus_cart'), {'prod_id': self.product1.id})
+        response = self.client.post(reverse('plus_cart'), {'prod_id': self.product1.id})
         self.assertEqual(response.status_code, 200)
         
         data = json.loads(response.content)
@@ -218,7 +218,7 @@ class CartViewTestCase(TestCase):
         self.client.login(username='testuser', password='testpass123')
         cart_item = Cart.objects.create(user=self.user, product=self.product1, quantity=2)
         
-        response = self.client.get(reverse('minus_cart'), {'prod_id': self.product1.id})
+        response = self.client.post(reverse('minus_cart'), {'prod_id': self.product1.id})
         self.assertEqual(response.status_code, 200)
         
         data = json.loads(response.content)
@@ -232,7 +232,7 @@ class CartViewTestCase(TestCase):
         self.client.login(username='testuser', password='testpass123')
         cart_item = Cart.objects.create(user=self.user, product=self.product1, quantity=1)
         
-        response = self.client.get(reverse('minus_cart'), {'prod_id': self.product1.id})
+        response = self.client.post(reverse('minus_cart'), {'prod_id': self.product1.id})
         
         cart_item.refresh_from_db()
         self.assertEqual(cart_item.quantity, 1)  # Should stay at 1
@@ -258,14 +258,14 @@ class WishlistViewTestCase(TestCase):
     
     def test_add_to_wishlist_requires_login(self):
         """Test wishlist requires authentication"""
-        response = self.client.get(reverse('add_to_wishlist'), {'prod_id': self.product.id})
+        response = self.client.post(reverse('add_to_wishlist'), {'prod_id': self.product.id})
         self.assertEqual(response.status_code, 302)
         self.assertIn('/accounts/login/', response.url)
     
     def test_add_to_wishlist_success(self):
         """Test adding product to wishlist"""
         self.client.login(username='testuser', password='testpass123')
-        response = self.client.get(reverse('add_to_wishlist'), {'prod_id': self.product.id})
+        response = self.client.post(reverse('add_to_wishlist'), {'prod_id': self.product.id})
         
         self.assertEqual(Wishlist.objects.filter(user=self.user).count(), 1)
         wishlist_item = Wishlist.objects.get(user=self.user, product=self.product)
@@ -276,7 +276,7 @@ class WishlistViewTestCase(TestCase):
         self.client.login(username='testuser', password='testpass123')
         Wishlist.objects.create(user=self.user, product=self.product)
         
-        response = self.client.get(reverse('add_to_wishlist'), {'prod_id': self.product.id})
+        response = self.client.post(reverse('add_to_wishlist'), {'prod_id': self.product.id})
         
         # Should still be only 1 item
         self.assertEqual(Wishlist.objects.filter(user=self.user).count(), 1)
@@ -296,7 +296,7 @@ class WishlistViewTestCase(TestCase):
         self.client.login(username='testuser', password='testpass123')
         Wishlist.objects.create(user=self.user, product=self.product)
         
-        response = self.client.get(reverse('remove_from_wishlist'), {'prod_id': self.product.id})
+        response = self.client.post(reverse('remove_from_wishlist'), {'prod_id': self.product.id})
         self.assertEqual(response.status_code, 200)
         
         data = json.loads(response.content)
@@ -599,7 +599,7 @@ class ProfileViewTestCase(TestCase):
         }
         
         response = self.client.post(reverse('profile'), data)
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)  # Now redirects with success message
         
         customer = Customer.objects.get(user=self.user)
         self.assertEqual(customer.name, 'Test User')
@@ -643,20 +643,20 @@ class CategoryViewTestCase(TestCase):
     
     def test_category_view_all_products(self):
         """Test viewing all products in category"""
-        response = self.client.get('/m')
+        response = self.client.get('/m/')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.context['products']), 5)
     
     def test_category_view_price_filter_below(self):
         """Test filtering products below price"""
-        response = self.client.get('/m/below')
+        response = self.client.get('/m/below/')
         self.assertEqual(response.status_code, 200)
         # Products with price < 10000
         self.assertLessEqual(len(response.context['products']), 5)
     
     def test_category_view_price_filter_above(self):
         """Test filtering products above price"""
-        response = self.client.get('/m/above')
+        response = self.client.get('/m/above/')
         self.assertEqual(response.status_code, 200)
         # Products with price >= 10000
         self.assertGreaterEqual(len(response.context['products']), 0)

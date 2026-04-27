@@ -9,7 +9,7 @@ class CustomerModelTestCase(TestCase):
 
     def test_customer_creation(self):
         self.assertIsInstance(self.customer, Customer)
-        self.assertEqual(str(self.customer), str(self.customer.id))
+        self.assertEqual(str(self.customer), f"{self.customer.name} ({self.customer.id})")
 
 class ProductModelTestCase(TestCase):
     def setUp(self):
@@ -17,7 +17,7 @@ class ProductModelTestCase(TestCase):
 
     def test_product_creation(self):
         self.assertIsInstance(self.product, Product)
-        self.assertEqual(str(self.product), str(self.product.id))
+        self.assertEqual(str(self.product), f"{self.product.title} ({self.product.id})")
 
 
 class CartModelTestCase(TestCase):
@@ -28,7 +28,7 @@ class CartModelTestCase(TestCase):
 
     def test_cart_creation(self):
         self.assertIsInstance(self.cart, Cart)
-        self.assertEqual(str(self.cart), str(self.cart.id))
+        self.assertEqual(str(self.cart), f"Cart: {self.user.username} - {self.product.title}")
         self.assertEqual(self.cart.total_cost, self.product.discounted_price * self.cart.quantity)
 
 
@@ -41,5 +41,5 @@ class OrderPlacedModelTestCase(TestCase):
 
     def test_order_placed_creation(self):
         self.assertIsInstance(self.order_placed, OrderPlaced)
-        self.assertEqual(str(self.order_placed), str(self.order_placed.id))
+        self.assertEqual(str(self.order_placed), f"Order {self.order_placed.id}: {self.user.username}")
         self.assertEqual(self.order_placed.total_cost, self.product.discounted_price * self.order_placed.quantity)
