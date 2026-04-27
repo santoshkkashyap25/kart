@@ -2,7 +2,7 @@ import os
 import shutil
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from app.models import Product
+from app.models import Product, Banner
 
 class Command(BaseCommand):
     help = 'Seeds the database with dummy products using static images'

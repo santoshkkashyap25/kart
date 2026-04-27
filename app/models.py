@@ -324,21 +324,7 @@ class FlashSale(models.Model):
         )
 
 
-class Banner(models.Model):
-    """Homepage banners / promotional slides"""
-    title = models.CharField(max_length=200)
-    subtitle = models.CharField(max_length=300, blank=True)
-    image = models.ImageField(upload_to='banners/')
-    link = models.URLField(blank=True)
-    button_text = models.CharField(max_length=50, default="Shop Now")
-    is_active = models.BooleanField(default=True)
-    display_order = models.IntegerField(default=0)
-    
-    class Meta:
-        ordering = ['display_order']
-    
-    def __str__(self):
-        return self.title
+
 
 
 class UserNotification(models.Model):

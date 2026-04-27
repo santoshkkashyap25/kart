@@ -302,29 +302,23 @@ class ContactMessageAdmin(admin.ModelAdmin):
 
 
 # Flash Sale Admin
-# @admin.register(FlashSale)
-# class FlashSaleAdmin(admin.ModelAdmin):
-#     list_display = ['product', 'sale_price', 'start_time', 'end_time', 'is_active', 'sales_progress']
-#     list_filter = ['is_active', 'start_time', 'end_time']
-#     search_fields = ['product__title']
-#     list_editable = ['is_active']
+@admin.register(FlashSale)
+class FlashSaleAdmin(admin.ModelAdmin):
+    list_display = ['product', 'sale_price', 'start_time', 'end_time', 'is_active', 'sales_progress']
+    list_filter = ['is_active', 'start_time', 'end_time']
+    search_fields = ['product__title']
+    list_editable = ['is_active']
     
-#     def sales_progress(self, obj):
-#         percentage = (obj.sold_quantity / obj.max_quantity) * 100 if obj.max_quantity > 0 else 0
-#         return format_html(
-#             '<progress value="{}" max="100" style="width: 100px;"></progress> {}%',
-#             percentage, round(percentage, 1)
-#         )
-#     sales_progress.short_description = 'Sales Progress'
+    def sales_progress(self, obj):
+        percentage = (obj.sold_quantity / obj.max_quantity) * 100 if obj.max_quantity > 0 else 0
+        return format_html(
+            '<progress value="{}" max="100" style="width: 100px;"></progress> {}%',
+            percentage, round(percentage, 1)
+        )
+    sales_progress.short_description = 'Sales Progress'
 
 
-# Banner Admin
-# @admin.register(Banner)
-# class BannerAdmin(admin.ModelAdmin):
-#     list_display = ['title', 'subtitle', 'is_active', 'display_order']
-#     list_filter = ['is_active']
-#     search_fields = ['title', 'subtitle']
-#     list_editable = ['is_active', 'display_order']
+
 
 
 # User Notification Admin

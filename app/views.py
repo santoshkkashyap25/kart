@@ -17,23 +17,59 @@ from django.http import HttpResponse
 class ProductView(View):
     def get(self, request):
         totalitem = 0
-        laptops = Product.objects.filter(category='L').distinct()
-        watches = Product.objects.filter(category='W').distinct()
-        mobiles = Product.objects.filter(category='M').distinct()
-        headphones = Product.objects.filter(category='H').distinct()
-
         if request.user.is_authenticated:
             totalitem = Cart.objects.filter(user=request.user).count()
+        
+        mobiles = Product.objects.filter(category='M')
+        laptops = Product.objects.filter(category='L')
+        watches = Product.objects.filter(category='W')
+        headphones = Product.objects.filter(category='H')
+        
+        recently_viewed = []
+        viewed_ids = request.session.get('recently_viewed', [])
+        if viewed_ids:
+            recently_viewed = Product.objects.filter(id__in=viewed_ids)
 
         return render(request, 'app/home.html', {
+            'mobiles': mobiles,
             'laptops': laptops,
             'watches': watches,
-            'mobiles': mobiles,
             'headphones': headphones,
+            'recently_viewed': recently_viewed,
             'totalitem': totalitem
         })
 
-# Removed duplicate ProductDetailView from here (consolidated later)
+class ProductDetailView(View):
+    def get(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+        totalitem = 0
+        item_already_in_cart = False
+        in_wishlist = False
+        
+        if request.user.is_authenticated:
+            totalitem = Cart.objects.filter(user=request.user).count()
+            item_already_in_cart = Cart.objects.filter(Q(product=product.id) & Q(user=request.user)).exists()
+            in_wishlist = Wishlist.objects.filter(Q(product=product.id) & Q(user=request.user)).exists()
+            
+            # Recently Viewed Logic
+            viewed_products = request.session.get('recently_viewed', [])
+            if pk in viewed_products:
+                viewed_products.remove(pk)
+            viewed_products.insert(0, pk)
+            request.session['recently_viewed'] = viewed_products[:10]
+            
+        reviews = Review.objects.filter(product=product).select_related('user')
+        avg_rating = reviews.aggregate(Avg('rating'))['rating__avg'] or 0
+        
+        return render(request, 'app/productdetail.html', {
+            'product': product,
+            'item_already_in_cart': item_already_in_cart,
+            'in_wishlist': in_wishlist,
+            'totalitem': totalitem,
+            'reviews': reviews,
+            'avg_rating': round(avg_rating, 1),
+            'total_reviews': reviews.count()
+        })
 
 @login_required 
 def add_to_cart(request):
