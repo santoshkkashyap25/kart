@@ -38,59 +38,52 @@
 - **Inventory Management** - Real-time stock tracking with low-stock alerts
 - **Order Management** - Process orders, update status, generate invoices
 - **Customer Management** - View history, lifetime value, segmentation
-<!-- 
-### **Technical Excellence**
-- **RESTful API** - 15+ endpoints -->
-<!-- - **Background Jobs** - Celery for async processing (emails, reports)
-- **CI/CD Pipeline** - Automated testing and deployment
-- **Docker Support** - Containerized application with docker-compose
-- **Cloud Ready** - AWS, Heroku, DigitalOcean deployment guides
-- **Monitoring** - Sentry error tracking, performance monitoring
- -->
 ---
 
-## Quick Start
+## Quick Start (Docker - Automated)
 
-### Local Development
+The fastest way to get KART running is using Docker. The setup is fully automated, including migrations and data seeding.
 
+1.  **Clone and Configure**
+    ```bash
+    git clone https://github.com/santoshkkashyap25/kart.git
+    cd kart
+    cp .env.example .env
+    ```
+
+2.  **Start the Application**
+    ```bash
+    docker-compose up -d --build
+    ```
+    This command builds the image and starts the server. It also automatically runs migrations, seeds the database with dummy products, and creates an admin account.
+
+3.  **Access the Store**
+    - Storefront: [http://localhost:8000](http://localhost:8000)
+    - Admin Panel: [http://localhost:8000/admin](http://localhost:8000/admin) (User: `admin`, Pass: `adminpass`)
+
+---
+
+### Manual Installation (Local)
+
+If you prefer to run it without Docker:
 ```bash
-# Clone the repository
-https://github.com/santoshkkashyap25/kart.git
-cd kart
-
-# Create virtual environment
+# Set up virtual environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Run migrations
+# Run migrations and seed data
 python manage.py migrate
+python manage.py seed_data
 
-# Create superuser
+# Create superuser and run
 python manage.py createsuperuser
-
-# Run development server
 python manage.py runserver
 ```
 
-<!-- ### Docker Deployment
-
-```bash
-# Build and run containers
-docker-compose up -d
-
-# Run migrations
-docker-compose exec web python manage.py migrate
-
-# Create superuser
-docker-compose exec web python manage.py createsuperuser
-
-# View logs
-docker-compose logs -f
-```
- -->
+---
 ## Testing
 
 ```bash

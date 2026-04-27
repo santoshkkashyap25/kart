@@ -24,8 +24,27 @@ env/
 # -------------------------
 # Django media & static files
 # -------------------------
-# Ignore all media
+# Environment variables
+.env
+
+# Database
+db.sqlite3
+
+# Media
 media/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.env/
+
+# IDEs
+.vscode/
+.idea/
 !media/productimg/
 
 # Ignore collected static files
