@@ -1,6 +1,6 @@
 # KART - E-Commerce Platform
 
-> A full-stack e-commerce platform built with Django, featuring 110+ advanced features, security, and enterprise-grade architecture.
+> A full-stack e-commerce platform built with Django, featuring 40+ features, security, and enterprise-grade architecture.
 
 ---
 
