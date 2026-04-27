@@ -89,46 +89,4 @@
   </div>
 </div>
 
-<script>
-$(document).ready(function() {
-  $('.remove-cart').click(function() {
-    var pid = $(this).attr('pid');
-    var btn = $(this);
-
-    $.ajax({
-      type: 'GET',
-      url: "{% url 'remove_cart' %}",
-      data: { 'prod_id': pid },
-      success: function(data) {
-        if (data.status === 'success') {
-          btn.closest('.cart-item').fadeOut(300, function() {
-            $(this).remove();
-
-            // Update totals after removal
-            $('#amount').text(data.amount);
-            $('#total_amount').text(data.total_amount);
-
-            if ($('.cart-item').length === 0) {
-              $('.cart-container').html(`
-                <div class="container my-5">
-                  <div class="row">
-                    <h3 class="text-center">You have no product in Your Cart</h3>
-                    <div class="text-center">
-                      <img src="{% static 'app/images/emptycart.png' %}" 
-                           alt="Empty Cart" 
-                           class="img-fluid img-thumbnail w-25">
-                    </div>
-                  </div>
-                </div>
-              `);
-            }
-          });
-        }
-      }
-    });
-  });
-});
-</script>
-
-
 {% endblock main-content %}

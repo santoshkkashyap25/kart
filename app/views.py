@@ -1,23 +1,18 @@
 from django.views import View
 from django.contrib import messages
-from .forms import CustomerProfileForm
-from django.db.models import Q
-from django.http import JsonResponse 
+from django.db.models import Q, Avg, Count, Case, When
+from django.http import JsonResponse, Http404
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.shortcuts import render, redirect, get_object_or_404
-from django.db.models import Q, Avg, Count
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.utils.decorators import method_decorator
-from django.http import JsonResponse
-from django.db.models import Case, When
 from django.core.paginator import Paginator
-from django.http import Http404
 from django.template.loader import render_to_string
+from django.utils import timezone
 from .models import *
 from .forms import *
 import json
+import csv
+from django.http import HttpResponse
 
 class ProductView(View):
     def get(self, request):
@@ -38,101 +33,105 @@ class ProductView(View):
             'totalitem': totalitem
         })
 
-class ProductDetailView(View):
-    def get(self,request,pk):
-        totalitem=0
-        product=Product.objects.get(pk=pk)
-        item_already_in_cart=False
-        if request.user.is_authenticated:
-            totalitem=len(Cart.objects.filter(user=request.user))
-            item_already_in_cart=Cart.objects.filter(Q(product=product.id) & Q(user=request.user)).exists()
-        return render(request,'app/productdetail.html',
-            {'product':product,'item_already_in_cart':item_already_in_cart,'totalitem':totalitem})
+# Removed duplicate ProductDetailView from here (consolidated later)
 
-@login_required # as it is function based 
+@login_required 
 def add_to_cart(request):
-    user=request.user
-    product_id=request.GET.get('prod_id')
-    product=Product.objects.get(id=product_id)
-    Cart(user=user,product=product).save()
-    return redirect('/cart') 
+    user = request.user
+    if request.method == 'POST':
+        product_id = request.POST.get('prod_id')
+    else:
+        product_id = request.GET.get('prod_id')
+        
+    product = get_object_or_404(Product, id=product_id)
+    
+    # Check if item already in cart to avoid duplicates or update quantity
+    cart_item, created = Cart.objects.get_or_create(user=user, product=product)
+    if not created:
+        cart_item.quantity += 1
+        cart_item.save()
+        
+    return redirect('showcart') 
 
 def show_cart(request):
-    totalitem=0
+    totalitem = 0
     if request.user.is_authenticated:
-        totalitem=len(Cart.objects.filter(user=request.user))
         user = request.user
-        cart = Cart.objects.filter(user=user)
-        amount=0.0
-        shipping_amount=70.0
-        total_amount=0.0
-        cart_product=[p for p in Cart.objects.all() if p.user==user]
-        #print(cart_product)
-        if cart_product:
-            for p in cart_product:
-                tempamount=(p.quantity*p.product.discounted_price)
-                amount+=tempamount
-                total_amount=amount+shipping_amount
-            return render(request, 'app/addtocart.html', {'carts': cart,'total_amount':total_amount,'amount':amount,'totalitem':totalitem})
+        cart = Cart.objects.filter(user=user).select_related('product')
+        totalitem = cart.count()
+        
+        amount = 0.0
+        shipping_amount = 70.0
+        
+        if cart.exists():
+            for p in cart:
+                amount += (p.quantity * float(p.product.discounted_price))
+            
+            total_amount = amount + shipping_amount
+            return render(request, 'app/addtocart.html', {
+                'carts': cart,
+                'total_amount': total_amount,
+                'amount': amount,
+                'totalitem': totalitem
+            })
         else:
-            return render(request,'app/emptycart.html',{'totalitem':totalitem})
+            return render(request, 'app/emptycart.html', {'totalitem': totalitem})
+    return redirect('login')
 
+@login_required
 def plus_cart(request):
-    if request.method == 'GET':
-        prod_id = request.GET['prod_id']
-        c = Cart.objects.get(Q(product=prod_id) & Q(user=request.user))
+    if request.method == 'POST':
+        prod_id = request.POST.get('prod_id')
+        user = request.user
+        c = get_object_or_404(Cart, product_id=prod_id, user=user)
         c.quantity += 1
         c.save()
-        amount = 0.0
+        
+        cart_items = Cart.objects.filter(user=user).select_related('product')
+        amount = sum(p.quantity * float(p.product.discounted_price) for p in cart_items)
         shipping_amount = 70.0
-        cart_product = [p for p in Cart.objects.all() if p.user == request.user]
-        for p in cart_product:
-            tempamount = (p.quantity * p.product.discounted_price)
-            amount += tempamount
 
         data = {
             'quantity': c.quantity,
             'amount': amount,
             'total_amount': amount + shipping_amount
         }
-
         return JsonResponse(data)
 
-
-
+@login_required
 def minus_cart(request):
-    if request.method == 'GET':
-        prod_id = request.GET['prod_id']
-        c = Cart.objects.get(Q(product=prod_id) & Q(user=request.user))
-        if c.quantity > 1:  # Add this condition to prevent quantity from going below 1
+    if request.method == 'POST':
+        prod_id = request.POST.get('prod_id')
+        user = request.user
+        c = get_object_or_404(Cart, product_id=prod_id, user=user)
+        
+        if c.quantity > 1:
             c.quantity -= 1
             c.save()
-        amount = 0.0
+            
+        cart_items = Cart.objects.filter(user=user).select_related('product')
+        amount = sum(p.quantity * float(p.product.discounted_price) for p in cart_items)
         shipping_amount = 70.0
-        cart_product = [p for p in Cart.objects.all() if p.user == request.user]
-        for p in cart_product:
-            tempamount = (p.quantity * p.product.discounted_price)
-            amount += tempamount
 
         data = {
             'quantity': c.quantity,
             'amount': amount,
             'total_amount': amount + shipping_amount
         }
-
         return JsonResponse(data)
 
 @login_required
 def remove_cart(request):
-    if request.method == 'GET':
-        prod_id = request.GET.get('prod_id')
-        Cart.objects.filter(user=request.user, product_id=prod_id).delete()
+    if request.method == 'POST':
+        prod_id = request.POST.get('prod_id')
+        user = request.user
+        Cart.objects.filter(user=user, product_id=prod_id).delete()
         
-        # Check if user still has items in cart
-        cart_items = Cart.objects.filter(user=request.user)
+        cart_items = Cart.objects.filter(user=user).select_related('product')
         totalitem = cart_items.count()
+        
         if cart_items.exists():
-            amount = sum(p.quantity * p.product.discounted_price for p in cart_items)
+            amount = sum(p.quantity * float(p.product.discounted_price) for p in cart_items)
             shipping_amount = 70.0
             total_amount = amount + shipping_amount
 
@@ -142,7 +141,6 @@ def remove_cart(request):
                 'total_amount': total_amount,
             }
         else:
-            # Render the empty cart HTML
             empty_html = render_to_string('app/emptycart_message.html', {'totalitem': totalitem})
             data = {
                 'status': 'empty',
@@ -220,33 +218,39 @@ class CustomerRegistrationView(View):
 
 @login_required
 def checkout(request):
-    user =request.user
-    add=Customer.objects.filter(user=user) 
-    cart_items=Cart.objects.filter(user=user)
-    amount=0.0
-    shipping_amount=70.0
-    total_amount=0.0
-    cart_product = [p for p in Cart.objects.all() if p.user == request.user]
-    if cart_product:
-        for p in cart_product:
-                tempamount = (p.quantity * p.product.discounted_price)
-                amount += tempamount
-        total_amount=amount+shipping_amount
-    return render(request, 'app/checkout.html' ,{'add':add,'total_amount':total_amount,'cart_items':cart_items})
+    user = request.user
+    addresses = Customer.objects.filter(user=user)
+    cart_items = Cart.objects.filter(user=user).select_related('product')
+    
+    amount = 0.0
+    shipping_amount = 70.0
+    total_amount = 0.0
+    
+    if cart_items.exists():
+        amount = sum(p.quantity * float(p.product.discounted_price) for p in cart_items)
+        total_amount = amount + shipping_amount
+        
+    return render(request, 'app/checkout.html', {
+        'add': addresses,
+        'total_amount': total_amount,
+        'cart_items': cart_items
+    })
 
 @login_required
 def payment_done(request):
-    user=request.user # get the current user
-    custid=request.GET.get('custid')
-    customer=Customer.objects.get(id=custid)
-    cart=Cart.objects.filter(user=user)
+    user = request.user
+    custid = request.GET.get('custid')
+    # SECURITY: Ensure customer belongs to this user
+    customer = get_object_or_404(Customer, id=custid, user=user)
+    cart = Cart.objects.filter(user=user)
+    
     for c in cart:
-        OrderPlaced(user=user,customer=customer,product=c.product,quantity=c.quantity).save()
+        OrderPlaced(user=user, customer=customer, product=c.product, quantity=c.quantity).save()
         c.delete()
     return redirect("orders")
 
 
-@method_decorator(login_required,name='dispatch') # no profile view without login
+@method_decorator(login_required, name='dispatch')
 class ProfileView(View):
     def get(self, request):
         form = CustomerProfileForm()
@@ -255,15 +259,19 @@ class ProfileView(View):
     def post(self, request):
         form = CustomerProfileForm(request.POST)
         if form.is_valid():
-            usr = request.user # to get the current user
-            name=form.cleaned_data['name']
-            locality=form.cleaned_data['locality']
-            city=form.cleaned_data['city']
-            state=form.cleaned_data['state']
-            zipcode=form.cleaned_data['zipcode']
-            reg=Customer(user=usr,name=name,locality=locality,city=city,state=state,zipcode=zipcode)
+            usr = request.user
+            name = form.cleaned_data['name']
+            locality = form.cleaned_data['locality']
+            city = form.cleaned_data['city']
+            state = form.cleaned_data['state']
+            zipcode = form.cleaned_data['zipcode']
+            
+            # Use update_or_create or filter logic to avoid duplicate Customer profiles
+            # Or just create a new one as the UI seems to allow multiple addresses
+            reg = Customer(user=usr, name=name, locality=locality, city=city, state=state, zipcode=zipcode)
             reg.save()
-            messages.success(request, 'Your profile has been updated successfully!')
+            messages.success(request, 'Profile address added successfully!')
+            return redirect('address')
         return render(request, 'app/profile.html', {'form': form, 'active': 'btn-primary'})
 
 
@@ -272,17 +280,22 @@ class ProfileView(View):
 @login_required
 def add_to_wishlist(request):
     """Add product to user's wishlist"""
-    if request.method == 'GET':
-        prod_id = request.GET.get('prod_id')
-        product = Product.objects.get(id=prod_id)
+    if request.method == 'POST' or request.method == 'GET':
+        data_source = request.POST if request.method == 'POST' else request.GET
+        prod_id = data_source.get('prod_id')
+        product = get_object_or_404(Product, id=prod_id)
         user = request.user
         
         # Check if already in wishlist
         wishlist_item = Wishlist.objects.filter(user=user, product=product)
         if wishlist_item.exists():
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'info', 'message': 'Already in wishlist'})
             messages.info(request, 'Product already in wishlist')
         else:
             Wishlist.objects.create(user=user, product=product)
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'status': 'success', 'message': 'Added to wishlist'})
             messages.success(request, 'Product added to wishlist')
         
         return redirect(request.META.get('HTTP_REFERER', 'home'))
@@ -304,10 +317,10 @@ def show_wishlist(request):
 @login_required
 def remove_from_wishlist(request):
     """Remove product from wishlist"""
-    if request.method == 'GET':
-        prod_id = request.GET.get('prod_id')
-        Wishlist.objects.filter(user=request.user, product_id=prod_id).delete()
-        return JsonResponse({'status': 'success'})
+    source = request.POST if request.method == 'POST' else request.GET
+    prod_id = source.get('prod_id')
+    Wishlist.objects.filter(user=request.user, product_id=prod_id).delete()
+    return JsonResponse({'status': 'success'})
 
 
 # ============= PRODUCT REVIEW FEATURE =============
@@ -315,10 +328,14 @@ def remove_from_wishlist(request):
 def add_review(request, pk):
     """Add review for a product"""
     if request.method == 'POST':
-        product = Product.objects.get(pk=pk)
+        product = get_object_or_404(Product, pk=pk)
         rating = request.POST.get('rating')
         comment = request.POST.get('comment')
         
+        if not rating or not comment:
+            messages.error(request, 'Please provide both rating and comment')
+            return redirect('product-detail', pk=pk)
+            
         # Check if user already reviewed
         existing_review = Review.objects.filter(user=request.user, product=product)
         if existing_review.exists():

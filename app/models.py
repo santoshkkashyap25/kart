@@ -1,9 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.core.validators import MaxValueValidator,MinValueValidator
-from django.db import models
-from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.utils import timezone
 from django.utils import timezone
 
 # Create your models here.
@@ -55,8 +53,8 @@ class Customer(models.Model):
 	zipcode = models.IntegerField()
 	state=models.CharField(choices=STATE_CHOICES,max_length=60)
 
-	def __str__(self): # return the name of the customer when it is printed.
-		return str(self.id)
+	def __str__(self):
+		return f"{self.name} ({self.id})"
 
 CATEGORY_CHOICES = (
     ('M', 'Mobile'),
@@ -67,8 +65,8 @@ CATEGORY_CHOICES = (
 
 class Product(models.Model):
     title = models.CharField(max_length=255)
-    selling_price = models.FloatField()
-    discounted_price = models.FloatField()
+    selling_price = models.DecimalField(max_digits=10, decimal_places=2)
+    discounted_price = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.TextField()
     brand = models.CharField(max_length=100)
     category = models.CharField(choices=CATEGORY_CHOICES, max_length=5)
@@ -104,7 +102,7 @@ class Product(models.Model):
 
 
     def __str__(self):
-    	return str(self.id)
+        return f"{self.title} ({self.id})"
 
 class Cart(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -112,7 +110,7 @@ class Cart(models.Model):
     quantity = models.PositiveIntegerField(default=1)
 
     def __str__(self):
-    	return str(self.id)
+        return f"Cart: {self.user.username} - {self.product.title}"
 
     @property
     def total_cost(self):
@@ -136,7 +134,7 @@ class OrderPlaced(models.Model):
     status = models.CharField(max_length=50, choices=STATUS_CHOICES,default='Pending')
 
     def __str__(self):
-        return str(self.id)
+        return f"Order {self.id}: {self.user.username}"
 
 
     @property
@@ -256,7 +254,7 @@ class ShippingMethod(models.Model):
     """Different shipping options"""
     name = models.CharField(max_length=100)
     description = models.TextField()
-    price = models.FloatField()
+    price = models.DecimalField(max_digits=10, decimal_places=2)
     estimated_days = models.IntegerField(help_text="Estimated delivery days")
     is_active = models.BooleanField(default=True)
     
@@ -307,7 +305,7 @@ class ProductNotification(models.Model):
 class FlashSale(models.Model):
     """Flash sales / limited time offers"""
     product = models.ForeignKey('Product', on_delete=models.CASCADE)
-    sale_price = models.FloatField()
+    sale_price = models.DecimalField(max_digits=10, decimal_places=2)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
     is_active = models.BooleanField(default=True)
